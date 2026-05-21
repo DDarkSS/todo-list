@@ -4,6 +4,10 @@ from src.repositories.task import TaskRepository
 from src.schemas.task import TaskCreateSchema, TaskEditSchema, TaskSchema
 
 
+class TaskNotFoundError(Exception):
+    """Задача с указанным id не найдена."""
+
+
 class TaskService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -14,15 +18,15 @@ class TaskService:
         return [TaskSchema.model_validate(task) for task in tasks]
 
     def create_task(self, new_task: TaskCreateSchema) -> TaskSchema:
-        task = self.task_repository.create(new_task.title)
+        task = self.task_repository.create(title=new_task.title)
         self.db.commit()
         return TaskSchema.model_validate(task)
 
-    def edit_task(self, id: str, payload: TaskEditSchema) -> TaskSchema | None:
+    def edit_task(self, id: str, payload: TaskEditSchema) -> TaskSchema:
         task_orm = self.task_repository.get_by_id(id)
 
         if task_orm is None:
-            return None
+            raise TaskNotFoundError(f"Task {id!r} not found")
 
         if payload.title:
             task_orm.title = payload.title
